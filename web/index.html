@@ -46,9 +46,6 @@
   </aside>
 
   <div class="controles" role="toolbar" aria-label="Opciones del mapa">
-    <button id="ubicacion" class="control" type="button" title="Usar mi ubicación" aria-label="Usar mi ubicación">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><circle cx="12" cy="12" r="7.5" fill="none"/><path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4" fill="none"/></svg>
-    </button>
     <div class="segmentado" role="group" aria-label="Tipo de mapa">
       <button id="base-mapa" type="button" aria-pressed="true">Mapa</button>
       <button id="base-satelite" type="button" aria-pressed="false">Satélite</button>
@@ -68,21 +65,18 @@
         <li><i class="muestra verde"></i>Alerta Temprana Preventiva</li>
         <li><i class="muestra vacia"></i>Sin alerta</li>
       </ul>
-      <h2>Eventos <span>últimas 48 h</span></h2>
+      <h2>Sismos <span>últimas 48 h</span></h2>
       <ul>
-        <li><i class="muestra azul"></i>Evento informado por SENAPRED</li>
-        <li><i class="muestra trama t1"></i>Sismo: intensidad I a III</li>
-        <li><i class="muestra trama t2"></i>Sismo: intensidad IV a V</li>
-        <li><i class="muestra trama t3"></i>Sismo: intensidad VI a VII</li>
-        <li><i class="muestra trama t4"></i>Sismo: intensidad VIII o más</li>
+        <li><i class="muestra trama t1"></i>Intensidad I a III</li>
+        <li><i class="muestra trama t2"></i>Intensidad IV a V</li>
+        <li><i class="muestra trama t3"></i>Intensidad VI a VII</li>
+        <li><i class="muestra trama t4"></i>Intensidad VIII o más</li>
       </ul>
       <p class="nota">La trama de intensidad es propia de este visor. No es una alerta oficial.</p>
       <label class="interruptor"><input id="ver-intensidad" type="checkbox" checked>Mostrar intensidad de sismos</label>
       <label class="interruptor"><input id="ver-antiguas" type="checkbox" checked><span id="ver-antiguas-texto">Incluir alertas sin novedades hace más de 30 días</span></label>
     </div>
   </details>
-
-  <div id="mensaje" class="mensaje" role="status" hidden></div>
 
   <script src="vendor/maplibre/maplibre-gl.js"></script>
   <script src="app.js"></script>

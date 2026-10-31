@@ -33,7 +33,6 @@ const estado = {
   frescura: "caido",
   fallosCarga: 0,
   marcas: [],
-  marcaYo: null,
 };
 const $ = (id) => document.getElementById(id);
 const memoria = {
@@ -158,7 +157,7 @@ function prepararCapas(comunas, regiones) {
   comunas.features.forEach((f) => {
     const p = f.properties;
     if (!p.reg) return;
-    const info = { ...p, caja: cajaDe(f.geometry), geometria: f.geometry };
+    const info = { ...p, caja: cajaDe(f.geometry) };
     info.centro = centroDe(f.geometry);
     estado.comunas.set(p.cut, info);
     etiquetas.features.push({ type: "Feature", properties: { nombre: p.nombre }, geometry: { type: "Point", coordinates: info.centro } });
@@ -270,22 +269,6 @@ function centroDe(g) {
   }
   return [x / (6 * a), y / (6 * a)];
 }
-function dentroAnillo([x, y], r) {
-  let dentro = false;
-  for (let i = 0, j = r.length - 1; i < r.length; j = i++) {
-    const [xi, yi] = r[i], [xj, yj] = r[j];
-    if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) dentro = !dentro;
-  }
-  return dentro;
-}
-function comunaEn(punto) {
-  for (const c of estado.comunas.values()) {
-    const [a, b, d, e] = c.caja;
-    if (punto[0] < a || punto[0] > d || punto[1] < b || punto[1] > e) continue;
-    if (poligonos(c.geometria).some((p) => dentroAnillo(punto, p[0]) && !p.slice(1).some((h) => dentroAnillo(punto, h)))) return c;
-  }
-  return null;
-}
 
 /* Datos */
 const alertasVisibles = () => (estado.datos?.alertas || []).filter((a) => estado.verAntiguas || diasSinNovedad(a) <= DIAS_ANTIGUA);
@@ -385,22 +368,14 @@ function pintar() {
 function dibujarMarcas(seleccion) {
   estado.marcas.forEach((m) => m.remove());
   estado.marcas = [];
-  const agregar = (p, clase, col, titulo, accion) => {
+  (seleccion ? [seleccion] : alertasVisibles()).forEach((a) => a.puntos.forEach((p) => {
+    const titulo = `${p.nombre}: ${NIVELES[a.nivel].nombre}`;
     const el = nodo("button", {
-      type: "button", className: `pin ${clase}`, title: titulo, ariaLabel: titulo,
-      css: col ? { "--color": col } : {}, onclick: (ev) => { ev.stopPropagation(); accion(); },
+      type: "button", className: "pin volcan", title: titulo, ariaLabel: titulo,
+      css: { "--color": NIVELES[a.nivel].css }, onclick: (ev) => { ev.stopPropagation(); elegirAlerta(a.id); },
     });
     estado.marcas.push(new maplibregl.Marker({ element: el }).setLngLat([p.lon, p.lat]).addTo(map));
-  };
-  (seleccion ? [seleccion] : alertasVisibles()).forEach((a) => a.puntos.forEach((p) => {
-    agregar(p, "volcan", NIVELES[a.nivel].css, `${p.nombre}: ${NIVELES[a.nivel].nombre}`, () => elegirAlerta(a.id));
   }));
-  if (seleccion) return;
-  estado.datos.eventos.forEach((e) => {
-    if (!e.punto) return;
-    const titulo = e.tipo === "sismo" ? `${e.titulo}${e.sismo.magnitud ? `, magnitud ${e.sismo.magnitud}` : ""}` : e.titulo;
-    agregar(e.punto, e.punto.tipo === "epicentro" ? "epicentro" : "", null, titulo, () => elegirEvento(e.id));
-  });
 }
 
 /* Seleccion */
@@ -515,7 +490,6 @@ function tarjetaEvento(e, cut) {
     epi && nodo("p", { className: "meta", textContent: `${epi.aproximado ? "Epicentro aproximado" : "Epicentro"}: ${epi.fuente}${epi.prof_km ? ` · ${epi.prof_km} km de profundidad` : ""}` }),
     lista.length > 0 && nodo("p", { textContent: `Intensidad Mercalli: ${lista.join(", ")}` }),
     s?.sin_ubicar?.length > 0 && nodo("p", { className: "meta", textContent: `También sentido en: ${s.sin_ubicar.join(", ")}` }),
-    e.punto?.tipo === "comuna" && nodo("p", { className: "meta", textContent: "El marcador está en el centro de la comuna, no en el lugar exacto." }),
     url && nodo("a", { className: "vinculo", href: url, target: "_blank", rel: "noopener", textContent: "Ver publicación oficial" }),
     !s && nodo("div", { className: "texto" }, e.texto.map((t) => nodo("p", { textContent: t }))),
   );
@@ -621,13 +595,6 @@ function iniciarBuscador() {
 }
 
 /* Controles */
-function avisar(texto) {
-  const m = $("mensaje");
-  m.textContent = texto;
-  m.hidden = false;
-  clearTimeout(avisar.t);
-  avisar.t = setTimeout(() => { m.hidden = true; }, 4500);
-}
 function aplicarTema(tema) {
   document.documentElement.dataset.tema = tema;
   memoria.guardar("tema", tema);
@@ -663,21 +630,6 @@ function aplicarBase(satelite) {
   map.setLayoutProperty("lugares", "visibility", satelite ? "visible" : "none");
   colorearMapa();
 }
-function usarUbicacion() {
-  if (!navigator.geolocation) { avisar("Este navegador no permite obtener tu ubicación."); return; }
-  $("ubicacion").classList.add("activo");
-  navigator.geolocation.getCurrentPosition((pos) => {
-    const p = [pos.coords.longitude, pos.coords.latitude];
-    estado.marcaYo?.remove();
-    estado.marcaYo = new maplibregl.Marker({ element: nodo("div", { className: "pin yo", title: "Tu ubicación" }) }).setLngLat(p).addTo(map);
-    const c = comunaEn(p);
-    if (c) elegirComuna(c.cut);
-    else { map.flyTo({ center: p, zoom: Math.max(map.getZoom(), 7) }); avisar("Tu ubicación no está dentro de una comuna de Chile."); }
-  }, () => {
-    $("ubicacion").classList.remove("activo");
-    avisar("No pudimos obtener tu ubicación. Revisa el permiso del navegador.");
-  }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 });
-}
 
 function iniciarEventosMapa() {
   const globo = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 12 });
@@ -700,7 +652,6 @@ function iniciarInterfaz() {
   $("tema").addEventListener("click", () => aplicarTema(document.documentElement.dataset.tema === "claro" ? "oscuro" : "claro"));
   $("base-mapa").addEventListener("click", () => aplicarBase(false));
   $("base-satelite").addEventListener("click", () => aplicarBase(true));
-  $("ubicacion").addEventListener("click", usarUbicacion);
   $("asa").addEventListener("click", () => $("panel").classList.toggle("alto"));
   $("puente").addEventListener("click", () => {
     const d = $("puente-detalle");

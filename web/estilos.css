@@ -180,7 +180,6 @@ a { color: inherit; }
 }
 .control { width: 38px; display: grid; place-items: center; padding: 0; }
 .control svg { width: 18px; height: 18px; fill: var(--texto); stroke: var(--texto); stroke-width: 1.6; }
-.control.activo { border-color: var(--azul); }
 .segmentado { display: flex; padding: 3px; }
 .segmentado button { padding: 0 11px; background: none; border: 0; border-radius: 5px; color: var(--tenue); font-size: 13px; }
 .segmentado button[aria-pressed="true"] { background: var(--superficie-2); color: var(--texto); font-weight: 600; }
@@ -207,7 +206,6 @@ a { color: inherit; }
 .muestra.roja { background: var(--roja); }
 .muestra.amarilla { background: var(--amarilla); }
 .muestra.verde { background: var(--verde); }
-.muestra.azul { background: var(--azul); border-radius: 50%; }
 .muestra.vacia { background: var(--fondo); border: 1px solid var(--borde); }
 .muestra.trama { background: repeating-linear-gradient(135deg, var(--c) 0 2px, transparent 2px 5px); border: 1px solid var(--c); }
 .muestra.t1 { --c: var(--t1); } .muestra.t2 { --c: var(--t2); } .muestra.t3 { --c: var(--t3); } .muestra.t4 { --c: var(--t4); }
@@ -231,24 +229,9 @@ a { color: inherit; }
 }
 .aviso-datos.atrasado { background: var(--amarilla); color: #1b1b1b; }
 .aviso-datos a { color: inherit; }
-.mensaje {
-  position: fixed;
-  left: 50%; bottom: 40px;
-  transform: translateX(-50%);
-  max-width: min(90vw, 420px);
-  padding: 9px 14px;
-  border-radius: 8px;
-  background: var(--superficie);
-  border: 1px solid var(--borde);
-  box-shadow: var(--sombra);
-  z-index: 6;
-}
 
 /* Marcadores del mapa */
-.pin { width: 16px; height: 16px; padding: 0; border: 2px solid #fff; border-radius: 50%; background: var(--color, var(--azul)); box-shadow: 0 0 0 1px rgba(0, 0, 0, .55), 0 1px 5px rgba(0, 0, 0, .5); }
-.pin.epicentro { width: 18px; height: 18px; box-shadow: 0 0 0 1px rgba(0, 0, 0, .55), 0 0 0 7px color-mix(in srgb, var(--azul) 35%, transparent); }
-.pin.volcan { width: 0; height: 0; border: 9px solid transparent; border-top: 0; border-bottom: 16px solid var(--color); border-radius: 0; background: none; box-shadow: none; filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff); }
-.pin.yo { width: 14px; height: 14px; background: #fff; border-color: var(--azul); border-width: 3px; }
+.pin.volcan { width: 0; height: 0; padding: 0; border: 9px solid transparent; border-top: 0; border-bottom: 16px solid var(--color); background: none; filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff); }
 
 /* Controles de MapLibre */
 .maplibregl-ctrl-group { background: var(--superficie) !important; border: 1px solid var(--borde); box-shadow: var(--sombra) !important; }
@@ -286,5 +269,4 @@ a { color: inherit; }
   .maplibregl-ctrl-top-right { top: 56px; }
   .maplibregl-ctrl-bottom-right { bottom: 46dvh; }
   .aviso-datos { left: 10px; right: 10px; top: 56px; }
-  .mensaje { bottom: 48dvh; }
 }
