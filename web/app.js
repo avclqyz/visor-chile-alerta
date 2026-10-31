@@ -130,7 +130,10 @@ const map = new maplibregl.Map({
 map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
 map.addControl(new maplibregl.AttributionControl({
   compact: true,
-  customAttribution: 'Límites: <a href="https://www.bcn.cl/siit/mapas_vectoriales" target="_blank" rel="noopener">BCN</a>',
+  customAttribution: [
+    'Límites: <a href="https://www.bcn.cl/siit/mapas_vectoriales" target="_blank" rel="noopener">BCN</a>',
+    'Epicentros: <a href="https://www.sismologia.cl/" target="_blank" rel="noopener">Centro Sismológico Nacional de la Universidad de Chile</a>',
+  ],
 }), "bottom-right");
 map.touchZoomRotate.disableRotation();
 
