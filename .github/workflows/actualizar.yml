@@ -1,0 +1,82 @@
+name: Puente SENAPRED
+
+on:
+  schedule:
+    # Cada 5 minutos, desfasado del minuto 0 porque GitHub atrasa mas esas ejecuciones.
+    - cron: "2-59/5 * * * *"
+    # Latido mensual: GitHub apaga las tareas programadas tras 60 dias sin actividad.
+    - cron: "17 9 1 * *"
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    if: github.event.schedule != '17 9 1 * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.despliegue.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: connector/requirements.txt
+
+      - run: pip install -r connector/requirements.txt
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: chromium-${{ runner.os }}-${{ hashFiles('connector/requirements.txt') }}
+
+      - run: python -m playwright install --with-deps chromium
+
+      - name: Pruebas del analizador
+        if: github.event_name == 'push'
+        run: python -m unittest discover connector/tests
+
+      - id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Recuperar el ultimo estado publicado
+        # Permite conservar los ultimos datos buenos si esta lectura falla.
+        run: |
+          if curl -fsSL --max-time 20 "${{ steps.pages.outputs.base_url }}/data/alertas.json?t=$(date +%s)" -o /tmp/previo.json; then
+            mv /tmp/previo.json web/data/alertas.json
+          fi
+
+      - name: Leer SENAPRED
+        run: python connector/actualizar.py
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+
+      - id: despliegue
+        uses: actions/deploy-pages@v4
+
+  latido:
+    if: github.event.schedule == '17 9 1 * *'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          git config user.name "visor-chile-alerta"
+          git config user.email "actions@users.noreply.github.com"
+          git commit --allow-empty -m "Latido mensual para mantener activas las tareas programadas"
+          git push
