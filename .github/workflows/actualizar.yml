@@ -17,7 +17,8 @@ concurrency:
 jobs:
   publicar:
     if: github.event.schedule != '17 9 1 * *'
-    runs-on: ubuntu-latest
+    # Fijo: Playwright 1.60 no instala Chromium en ubuntu-latest (26.04).
+    runs-on: ubuntu-24.04
     timeout-minutes: 8
     permissions:
       contents: read
