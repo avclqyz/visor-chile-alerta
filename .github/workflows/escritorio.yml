@@ -1,0 +1,66 @@
+name: App de escritorio
+
+# Compila la app para Mac y Windows y la deja en GitHub Releases.
+# Se ejecuta al subir una etiqueta escritorio-vX.Y.Z o a mano desde Actions.
+on:
+  push:
+    tags: ["escritorio-v*"]
+  workflow_dispatch:
+
+jobs:
+  construir:
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            comando: dist:mac
+          - os: windows-latest
+            comando: dist:win
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: escritorio
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: escritorio/package-lock.json
+      - run: npm ci
+      - run: npm run ${{ matrix.comando }}
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-${{ matrix.os }}
+          path: |
+            escritorio/dist/*.dmg
+            escritorio/dist/*.exe
+          if-no-files-found: error
+
+  publicar:
+    needs: construir
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: archivos
+          merge-multiple: true
+      - name: Crear o actualizar la version en Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(jq -r .version escritorio/package.json)
+          ETIQUETA="escritorio-v$VERSION"
+          if gh release view "$ETIQUETA" >/dev/null 2>&1; then
+            gh release upload "$ETIQUETA" archivos/* --clobber
+          else
+            gh release create "$ETIQUETA" archivos/* --target "$GITHUB_SHA" \
+              --title "Visor Chile Alerta $VERSION para Mac y Windows" \
+              --notes-file escritorio/INSTALAR.md
+          fi

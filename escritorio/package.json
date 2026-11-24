@@ -1,0 +1,49 @@
+{
+  "name": "visor-chile-alerta",
+  "productName": "Visor Chile Alerta",
+  "version": "2.0.0",
+  "description": "Mapa ciudadano no oficial de las alertas de SENAPRED por comuna",
+  "author": "avclqyz",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist:mac": "electron-builder --mac dmg --arm64 --x64 --publish never",
+    "dist:win": "electron-builder --win nsis --x64 --publish never"
+  },
+  "devDependencies": {
+    "electron": "45.2.3",
+    "electron-builder": "26.18.0"
+  },
+  "build": {
+    "appId": "cl.visorchilealerta.app",
+    "productName": "Visor Chile Alerta",
+    "artifactName": "Visor-Chile-Alerta-${version}-${os}-${arch}.${ext}",
+    "files": [
+      "main.js",
+      "sin-conexion.html"
+    ],
+    "directories": {
+      "buildResources": "build",
+      "output": "dist"
+    },
+    "mac": {
+      "category": "public.app-category.weather",
+      "identity": "-",
+      "icon": "build/icon.png",
+      "hardenedRuntime": false
+    },
+    "win": {
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "shortcutName": "Visor Chile Alerta"
+    }
+  },
+  "allowScripts": {
+    "electron-winstaller": false
+  }
+}

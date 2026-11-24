@@ -1,0 +1,10 @@
+{
+  "version": "2.0.0",
+  "fecha": "2026-11-24",
+  "novedades": [
+    "Nuevo modo Pro: una sala de situación más limpia, sin el radar.",
+    "Luz de aviso: en el modo Pro, los sismos y emergencias de la última hora titilan en el mapa y en la barra superior.",
+    "Aplicación para Mac y Windows: descárgala en github.com/avclqyz/visor-chile-alerta/releases.",
+    "Hay guiños a películas escondidos en el modo Pro. Pista: escribe el nombre de una."
+  ]
+}

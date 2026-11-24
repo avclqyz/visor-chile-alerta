@@ -84,3 +84,15 @@ mapshaper -i comunas.shp encoding=utf8 -proj wgs84 -filter-islands min-area=1.5k
 ```
 
 Después se normalizan los nombres de regiones y provincias, por ejemplo Bío-Bío a Biobío.
+
+## Versiones y aviso de novedades
+
+`web/version.json` define la versión y sus novedades. Al publicar una versión nueva, cambia el mismo número en
+`version.json`, en la constante `VERSION` de `web/app.js` y en los `?v=` de `web/index.html`. Cada visitante ve las
+novedades una vez, y quien tenga la web abierta recibe un aviso para actualizar.
+
+## App de escritorio
+
+`escritorio/` es una app de Electron para Mac y Windows que abre la web publicada, así que se actualiza sola.
+Para generar los instaladores, sube una etiqueta `escritorio-vX.Y.Z` o ejecuta **Actions → App de escritorio**.
+Quedan en GitHub Releases junto con las instrucciones de `escritorio/INSTALAR.md`.

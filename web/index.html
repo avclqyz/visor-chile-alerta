@@ -8,24 +8,34 @@
   <meta name="theme-color" content="#0b0e12">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b0e12'/%3E%3Cpath d='M16 6 27 25H5Z' fill='%23e03a3a'/%3E%3Cpath d='M15 13h2v6h-2zM15 21h2v2h-2z' fill='%23fff'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="vendor/maplibre/maplibre-gl.css">
-  <link rel="stylesheet" href="estilos.css">
+  <link rel="stylesheet" href="estilos.css?v=2.0.0">
 </head>
 <body>
   <div id="mapa" role="application" aria-label="Mapa de Chile por comunas"></div>
 
-  <div id="cine" class="cine" aria-hidden="true" hidden>
-    <div class="cine-rejilla"></div>
-    <div class="cine-radar"></div>
-    <div class="cine-velo"></div>
-    <div class="cine-marco"></div>
-    <p class="cine-arranque">Estableciendo enlace con SENAPRED…</p>
-    <div class="cine-hud">
-      <span class="cine-vivo">En vivo</span>
-      <span><span class="cine-titulo">Sala de situación · Chile </span><small>Visor no oficial</small></span>
-      <span class="cine-estado"><b id="cine-nivel"></b> <small id="cine-cifras"></small></span>
-      <span id="cine-reloj"></span>
+  <div id="pro" class="pro" aria-hidden="true" hidden>
+    <div class="pro-rejilla"></div>
+    <div class="pro-velo"></div>
+    <div class="pro-marco"></div>
+    <p class="pro-arranque">Estableciendo enlace con SENAPRED…</p>
+    <div class="pro-hud">
+      <span class="pro-vivo">En vivo</span>
+      <span id="pro-reciente" class="pro-reciente" hidden></span>
+      <span><span class="pro-titulo">Sala de situación · Chile </span><small>Visor no oficial</small></span>
+      <span class="pro-estado"><b id="pro-nivel"></b> <small id="pro-cifras"></small></span>
+      <span id="pro-reloj"></span>
     </div>
-    <div class="cine-cinta"><span class="cine-rotulo">Boletín</span><div class="cine-ventana"><div id="cine-pista" class="cine-pista"></div></div></div>
+    <div class="pro-cinta"><span class="pro-rotulo">Boletín</span><div class="pro-ventana"><div id="pro-pista" class="pro-pista"></div></div></div>
+  </div>
+
+  <div id="huevo" class="huevo" hidden></div>
+
+  <div id="novedades" class="novedades" role="dialog" aria-labelledby="novedades-titulo" hidden>
+    <button id="novedades-cerrar" class="novedades-cerrar" type="button" aria-label="Cerrar novedades">×</button>
+    <p id="novedades-version" class="novedades-version"></p>
+    <h2 id="novedades-titulo">Novedades</h2>
+    <ul id="novedades-lista"></ul>
+    <button id="novedades-recargar" class="novedades-accion" type="button" hidden>Actualizar ahora</button>
   </div>
 
   <div id="aviso-datos" class="aviso-datos" role="alert" hidden></div>
@@ -64,7 +74,7 @@
     <div class="segmentado" role="group" aria-label="Tipo de mapa">
       <button id="base-mapa" type="button" aria-pressed="true">Mapa</button>
       <button id="base-satelite" type="button" aria-pressed="false">Satélite</button>
-      <button id="base-cine" type="button" aria-pressed="false" title="Sala de situación animada">Cine</button>
+      <button id="base-pro" type="button" aria-pressed="false" title="Modo Pro: sala de situación">Pro</button>
     </div>
     <button id="tema" class="control" type="button" title="Cambiar a modo claro" aria-label="Cambiar a modo claro">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9Z"/></svg>
@@ -96,6 +106,6 @@
   </details>
 
   <script src="vendor/maplibre/maplibre-gl.js"></script>
-  <script src="app.js"></script>
+  <script src="app.js?v=2.0.0"></script>
 </body>
 </html>

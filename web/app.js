@@ -14,6 +14,9 @@ const TRAMOS = [
   { id: 4, desde: 8, hasta: 12, color: "#c026d3" },
 ];
 const ZONA_HORARIA = "America/Santiago";
+// Debe coincidir con version.json y con el ?v= de index.html.
+const VERSION = "2.0.0";
+const RECIENTE_MIN = 60;
 const CADA_MS = 60000;
 const MIN_ATRASADO = 30;
 const MIN_CAIDO = 90;
@@ -30,7 +33,7 @@ const estado = {
   verIntensidad: true,
   verAntiguas: true,
   satelite: false,
-  cine: false,
+  pro: false,
   frescura: "caido",
   fallosCarga: 0,
   marcas: [],
@@ -92,7 +95,7 @@ const diasSinNovedad = (a) => Math.floor((Date.now() - new Date(a.actualizada)) 
 function color(v) {
   return getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 }
-const opacidadRelleno = () => (estado.satelite ? 0.42 : estado.cine ? 0.5 : 0.62);
+const opacidadRelleno = () => (estado.satelite ? 0.42 : estado.pro ? 0.5 : 0.62);
 const nivelDe = ["coalesce", ["feature-state", "nivel"], 0];
 const ANIMAR = !matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -203,7 +206,7 @@ function prepararCapas(comunas, regiones) {
       "line-width": ["interpolate", ["linear"], ["zoom"], 3.5, 0.35, 8, 0.8],
     },
   });
-  // Halos del modo cine: solo se muestran en ese modo.
+  // Halos del modo pro: solo se muestran en ese modo.
   map.addLayer({
     id: "regiones-brillo",
     type: "line",
@@ -390,7 +393,7 @@ function pintar() {
   map.setFilter("cobertura-linea", ["in", ["get", "cut"], ["literal", cubiertas]]);
   map.setFilter("seleccion-linea", ["==", ["get", "cut"], estado.comunaSel ?? -1]);
   dibujarMarcas(seleccion);
-  actualizarCine();
+  actualizarPro();
 }
 
 function dibujarMarcas(seleccion) {
@@ -639,9 +642,9 @@ function aplicarTema(tema) {
 function colorearMapa() {
   map.setPaintProperty("fondo", "background-color", color("--fondo"));
   // Sobre la imagen satelital el relleno se confunde con el terreno: el borde lleva el color de la alerta.
-  // En el modo cine pasa lo mismo, para que las comunas en alerta brillen.
+  // En el modo pro pasa lo mismo, para que las comunas en alerta brillen.
   const porNivel = (resto) => ["match", nivelDe, 3, color("--roja"), 2, color("--amarilla"), 1, color("--verde"), resto];
-  map.setPaintProperty("comunas-linea", "line-color", estado.satelite ? porNivel("#ffffff") : estado.cine ? porNivel(color("--tenue")) : color("--tenue"));
+  map.setPaintProperty("comunas-linea", "line-color", estado.satelite ? porNivel("#ffffff") : estado.pro ? porNivel(color("--tenue")) : color("--tenue"));
   map.setPaintProperty("comunas-linea", "line-width", estado.satelite ? 1.6 : ["interpolate", ["linear"], ["zoom"], 3.5, 0.35, 8, 0.8]);
   map.setPaintProperty("regiones-linea", "line-color", estado.satelite ? "#ffffff" : color("--texto"));
   map.setPaintProperty("cobertura-linea", "line-color", estado.satelite ? "#ffffff" : color("--texto"));
@@ -652,44 +655,46 @@ function colorearMapa() {
 }
 function aplicarBase(base) {
   if (!map.getLayer("comunas-linea")) return;
-  const eraCine = estado.cine;
+  const eraPro = estado.pro;
   estado.satelite = base === "satelite";
-  estado.cine = base === "cine";
-  ["mapa", "satelite", "cine"].forEach((b) => $(`base-${b}`).setAttribute("aria-pressed", String(b === base)));
+  estado.pro = base === "pro";
+  ["mapa", "satelite", "pro"].forEach((b) => $(`base-${b}`).setAttribute("aria-pressed", String(b === base)));
   const ver = (id, si) => map.setLayoutProperty(id, "visibility", si ? "visible" : "none");
   ver("satelite", estado.satelite);
   ver("lugares", estado.satelite);
-  ver("regiones-brillo", estado.cine);
-  ver("alertas-brillo", estado.cine);
+  ver("regiones-brillo", estado.pro);
+  ver("alertas-brillo", estado.pro);
   document.documentElement.dataset.base = base;
-  $("tema").disabled = estado.cine;
+  $("tema").disabled = estado.pro;
   document.querySelector('meta[name="theme-color"]').content = color("--fondo");
   colorearMapa();
-  if (estado.cine !== eraCine) alternarCine();
+  if (estado.pro !== eraPro) alternarPro();
 }
 
-/* Modo cine: sala de situacion animada. Solo cambia la presentacion, no los datos. */
-const cine = { vuelta: 0, reloj: 0 };
+/* Modo pro: sala de situacion animada. Solo cambia la presentacion, no los datos. */
+const pro = { vuelta: 0, reloj: 0, balizas: [], clave: "" };
 
-function alternarCine() {
-  const capa = $("cine");
-  const vuelta = ++cine.vuelta;
-  clearInterval(cine.reloj);
-  capa.hidden = !estado.cine;
-  if (!estado.cine) {
+function alternarPro() {
+  const capa = $("pro");
+  const vuelta = ++pro.vuelta;
+  clearInterval(pro.reloj);
+  capa.hidden = !estado.pro;
+  if (!estado.pro) {
+    dibujarBalizas();
+    cerrarHuevo();
     map.easeTo({ pitch: 0, duration: ANIMAR ? 900 : 0 });
     return;
   }
   capa.classList.remove("arranca");
   void capa.offsetWidth;
   capa.classList.add("arranca");
-  actualizarCine();
+  actualizarPro();
   marcarReloj();
-  cine.reloj = setInterval(marcarReloj, 1000);
+  pro.reloj = setInterval(marcarReloj, 1000);
   map.easeTo({ pitch: 38, duration: ANIMAR ? 2200 : 0 });
   if (!ANIMAR) return;
   const latir = (t) => {
-    if (vuelta !== cine.vuelta) return;
+    if (vuelta !== pro.vuelta) return;
     const onda = (ms, min, max) => min + (max - min) * (0.5 + 0.5 * Math.sin((t / ms) * 2 * Math.PI));
     map.setPaintProperty("comunas-relleno", "fill-opacity",
       ["match", nivelDe, 3, onda(1200, 0.28, 0.7), 2, onda(2000, 0.24, 0.5), 1, onda(3000, 0.2, 0.38), 0]);
@@ -701,31 +706,234 @@ function alternarCine() {
 }
 
 function marcarReloj() {
-  $("cine-reloj").textContent = `${new Intl.DateTimeFormat("es-CL", {
+  $("pro-reloj").textContent = `${new Intl.DateTimeFormat("es-CL", {
     timeZone: ZONA_HORARIA, hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
   }).format(new Date())} CHILE`;
+  pro.balizas.forEach((b) => { b.texto.textContent = `${b.r.tipo} · ${hace(b.r.fecha)}`; });
 }
 
-function actualizarCine() {
-  if (!estado.cine || !estado.datos) return;
+/* Emergencias de la ultima hora: luz titilante en el mapa y aviso en la barra */
+function recientes() {
+  if (!estado.datos) return [];
+  const limite = Date.now() - RECIENTE_MIN * 6e4;
+  const eventos = estado.datos.eventos
+    .filter((e) => e.punto && new Date(e.fecha) >= limite)
+    .map((e) => ({
+      id: e.id, tipo: e.sismo ? "Sismo" : "Evento", fecha: e.fecha, lugar: e.sismo?.epicentro || e.punto,
+      color: "var(--naranja)", abrir: () => elegirEvento(e.id),
+    }));
+  const alertas = alertasVisibles()
+    .filter((a) => new Date(a.actualizada) >= limite)
+    .map((a) => {
+      const c = estado.comunas.get(a.comunas[0]);
+      const lugar = a.puntos[0] || (c && { lon: c.centro[0], lat: c.centro[1] });
+      return lugar && {
+        id: a.id, tipo: NIVELES[a.nivel].nombre, fecha: a.actualizada, lugar,
+        color: NIVELES[a.nivel].css, abrir: () => elegirAlerta(a.id),
+      };
+    })
+    .filter(Boolean);
+  return [...eventos, ...alertas].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+}
+
+function dibujarBalizas() {
+  const lista = estado.pro ? recientes() : [];
+  const clave = lista.map((r) => r.id).join();
+  const chip = $("pro-reciente");
+  chip.hidden = !lista.length;
+  $("pro").classList.toggle("con-reciente", lista.length > 0);
+  if (lista.length) {
+    chip.textContent = `${lista[0].tipo} ${hace(lista[0].fecha)}${lista.length > 1 ? ` +${lista.length - 1}` : ""}`;
+  }
+  if (clave === pro.clave) return;
+  pro.clave = clave;
+  pro.balizas.forEach((b) => b.marca.remove());
+  pro.balizas = lista.map((r) => {
+    const titulo = `${r.tipo} ${hace(r.fecha)}`;
+    const texto = nodo("span", { className: "baliza-texto", textContent: `${r.tipo} · ${hace(r.fecha)}` });
+    const el = nodo("button", {
+      type: "button", className: "baliza", title: titulo, ariaLabel: titulo, css: { "--color": r.color },
+      onclick: (ev) => { ev.stopPropagation(); r.abrir(); },
+    }, nodo("span", { className: "baliza-luz" }), texto);
+    return { r, texto, marca: new maplibregl.Marker({ element: el, anchor: "left", offset: [-9, 0] }).setLngLat([r.lugar.lon, r.lugar.lat]).addTo(map) };
+  });
+}
+
+function actualizarPro() {
+  if (!estado.pro || !estado.datos) return;
+  dibujarBalizas();
   const alertas = [...alertasVisibles()].sort((a, b) =>
     NIVELES[b.nivel].orden - NIVELES[a.nivel].orden || new Date(b.actualizada) - new Date(a.actualizada));
   const p = peor(alertas);
-  $("cine-nivel").textContent = p ? NIVELES[p.nivel].nombre.toUpperCase() : "SIN ALERTAS";
-  $("cine-nivel").style.setProperty("--color", p ? NIVELES[p.nivel].css : "var(--tenue)");
+  $("pro-nivel").textContent = p ? NIVELES[p.nivel].nombre.toUpperCase() : "SIN ALERTAS";
+  $("pro-nivel").style.setProperty("--color", p ? NIVELES[p.nivel].css : "var(--tenue)");
   const sismos = estado.datos.eventos.filter((e) => e.sismo).length;
   const plural = (n, palabra) => `${n} ${palabra}${n === 1 ? "" : "S"}`;
-  $("cine-cifras").textContent = `${plural(alertas.length, "ALERTA")} · ${plural(sismos, "SISMO")} 48 H`;
+  $("pro-cifras").textContent = `${plural(alertas.length, "ALERTA")} · ${plural(sismos, "SISMO")} 48 H`;
   const avisos = [
     ...alertas.map((a) => `${NIVELES[a.nivel].nombre.toUpperCase()} · ${a.titulo}`),
     ...estado.datos.eventos.map((e) => `${e.sismo ? "SISMO" : "EVENTO"} · ${e.titulo}`),
   ];
   const texto = `${(avisos.length ? avisos : ["Sin alertas vigentes publicadas por SENAPRED"]).join("   ◆   ")}   ◆   `;
-  const pista = $("cine-pista");
+  const pista = $("pro-pista");
   if (pista.dataset.texto === texto) return;
   pista.dataset.texto = texto;
   pista.replaceChildren(nodo("span", { textContent: texto }), nodo("span", { textContent: texto }));
   pista.style.setProperty("--duracion", `${Math.max(40, Math.round(texto.length * 0.18))}s`);
+}
+
+/* Secretos del modo Pro: se activan escribiendo el nombre en el teclado */
+let finHuevo = 0;
+function mostrarHuevo(clase, contenido, ms) {
+  clearTimeout(finHuevo);
+  const h = $("huevo");
+  h.className = `huevo ${clase}`;
+  h.replaceChildren(...contenido);
+  h.hidden = false;
+  finHuevo = setTimeout(cerrarHuevo, ms);
+}
+function cerrarHuevo() {
+  clearTimeout(finHuevo);
+  $("huevo").hidden = true;
+  $("huevo").replaceChildren();
+}
+const lienzoCompleto = () => {
+  const l = nodo("canvas", { className: "huevo-lienzo" });
+  l.width = innerWidth;
+  l.height = innerHeight;
+  return l;
+};
+
+function lluviaMatrix() {
+  const lienzo = lienzoCompleto();
+  mostrarHuevo("matrix", [lienzo, nodo("p", { className: "huevo-frase", textContent: "Sigue al conejo blanco." })], 9000);
+  if (!ANIMAR) return;
+  const x = lienzo.getContext("2d");
+  const tam = 16;
+  const gotas = Array.from({ length: Math.ceil(lienzo.width / tam) }, () => Math.random() * -40);
+  const signos = "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワン0123456789";
+  let previo = 0;
+  const caer = (t) => {
+    if (!lienzo.isConnected) return;
+    if (t - previo > 45) {
+      previo = t;
+      x.fillStyle = "rgba(0, 8, 2, .12)";
+      x.fillRect(0, 0, lienzo.width, lienzo.height);
+      x.font = `${tam}px monospace`;
+      gotas.forEach((y, i) => {
+        x.fillStyle = Math.random() > 0.96 ? "#d7ffd9" : "#22e06b";
+        x.fillText(signos[Math.floor(Math.random() * signos.length)], i * tam, y * tam);
+        gotas[i] = y * tam > lienzo.height && Math.random() > 0.975 ? 0 : y + 1;
+      });
+    }
+    requestAnimationFrame(caer);
+  };
+  requestAnimationFrame(caer);
+}
+
+function logograma() {
+  const lienzo = lienzoCompleto();
+  mostrarHuevo("arrival", [lienzo, nodo("p", { className: "huevo-frase", textContent: "Un idioma sin principio ni fin." })], 8000);
+  const x = lienzo.getContext("2d");
+  const cx = lienzo.width / 2;
+  const cy = lienzo.height / 2;
+  const radio = Math.min(lienzo.width, lienzo.height) * 0.24;
+  const manchas = Array.from({ length: 7 }, () => ({ a: Math.random() * 2 * Math.PI, largo: 0.12 + Math.random() * 0.4, grueso: 8 + Math.random() * 30 }));
+  const semilla = Math.random() * 10;
+  const inicio = performance.now();
+  const trazar = (t) => {
+    if (!lienzo.isConnected) return;
+    const avance = ANIMAR ? Math.min(1, (t - inicio) / 2600) : 1;
+    x.clearRect(0, 0, lienzo.width, lienzo.height);
+    x.strokeStyle = "rgba(14, 14, 18, .9)";
+    x.lineCap = "round";
+    for (let k = 0; k < Math.floor(360 * avance); k++) {
+      const ang = -Math.PI / 2 + (k / 360) * 2 * Math.PI;
+      let grosor = 3;
+      manchas.forEach((m) => {
+        const d = Math.atan2(Math.sin(ang - m.a), Math.cos(ang - m.a));
+        grosor += m.grueso * Math.exp(-((d / m.largo) ** 2));
+      });
+      x.beginPath();
+      x.lineWidth = grosor;
+      x.arc(cx, cy, radio + Math.sin(ang * 5 + semilla) * 5, ang, ang + 0.022);
+      x.stroke();
+    }
+    if (avance < 1) requestAnimationFrame(trazar);
+  };
+  requestAnimationFrame(trazar);
+}
+
+function juegoGuerra() {
+  const pantalla = nodo("pre", { className: "huevo-terminal" });
+  mostrarHuevo("wargames", [pantalla], 11000);
+  const texto = "CONECTANDO CON WOPR...\n\n¿QUIERES JUGAR UN JUEGO?\n\n> GUERRA TERMONUCLEAR GLOBAL\n\nSIMULANDO ESCENARIOS...\n\nLA ÚNICA JUGADA GANADORA ES NO JUGAR.";
+  let i = ANIMAR ? 0 : texto.length - 1;
+  const teclear = () => {
+    if (!pantalla.isConnected) return;
+    i += 1;
+    pantalla.textContent = texto.slice(0, i) + (i < texto.length ? "█" : "");
+    if (i < texto.length) setTimeout(teclear, texto[i - 1] === "\n" ? 240 : 36);
+  };
+  teclear();
+}
+
+function ojoHal() {
+  mostrarHuevo("hal", [
+    nodo("div", { className: "huevo-ojo" }),
+    nodo("p", { className: "huevo-frase", textContent: "Lo siento, Dave. Me temo que no puedo hacer eso." }),
+  ], 7000);
+}
+
+function mejorar() {
+  mostrarHuevo("mejorar", [
+    nodo("div", { className: "huevo-mira" }),
+    nodo("p", { className: "huevo-frase", textContent: "Mejorar 224 a 176. Mejorar. Detener." }),
+  ], 4500);
+  map.easeTo({ zoom: Math.min(map.getZoom() + 2, 12), duration: ANIMAR ? 2500 : 0 });
+}
+
+const SECRETOS = { matrix: lluviaMatrix, neo: lluviaMatrix, arrival: logograma, joshua: juegoGuerra, hal: ojoHal, enhance: mejorar, mejorar };
+const KONAMI = "ArrowUp ArrowUp ArrowDown ArrowDown ArrowLeft ArrowRight ArrowLeft ArrowRight b a";
+function iniciarSecretos() {
+  let letras = "";
+  let teclas = [];
+  document.addEventListener("keydown", (e) => {
+    if (!estado.pro || e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.("input, textarea")) return;
+    teclas = [...teclas, e.key.length === 1 ? e.key.toLowerCase() : e.key].slice(-10);
+    if (teclas.join(" ") === KONAMI) { teclas = []; lluviaMatrix(); return; }
+    if (e.key.length !== 1) return;
+    letras = (letras + e.key.toLowerCase()).slice(-12);
+    const clave = Object.keys(SECRETOS).find((k) => letras.endsWith(k));
+    if (clave) { letras = ""; SECRETOS[clave](); }
+  });
+}
+
+/* Novedades: se muestran una vez por version, y avisan si hay una version nueva publicada */
+let versionAvisada = null;
+async function revisarVersion(inicio) {
+  let v;
+  try {
+    const r = await fetch(`version.json?t=${Date.now()}`, { cache: "no-store" });
+    if (!r.ok) return;
+    v = await r.json();
+  } catch { return; }
+  if (v.version !== VERSION) {
+    if (versionAvisada !== v.version) mostrarNovedades(v, true);
+    versionAvisada = v.version;
+  } else if (inicio && memoria.leer("version-vista") !== VERSION) {
+    mostrarNovedades(v, false);
+  }
+}
+function mostrarNovedades(v, nueva) {
+  $("novedades-version").textContent = nueva ? `Hay una versión nueva (${v.version})` : `Versión ${v.version}`;
+  $("novedades-lista").replaceChildren(...v.novedades.map((t) => nodo("li", { textContent: t })));
+  $("novedades-recargar").hidden = !nueva;
+  $("novedades").hidden = false;
+}
+function cerrarNovedades() {
+  $("novedades").hidden = true;
+  memoria.guardar("version-vista", VERSION);
 }
 
 function iniciarEventosMapa() {
@@ -747,8 +955,11 @@ function iniciarEventosMapa() {
 
 function iniciarInterfaz() {
   $("tema").addEventListener("click", () => aplicarTema(document.documentElement.dataset.tema === "claro" ? "oscuro" : "claro"));
-  ["mapa", "satelite", "cine"].forEach((b) => $(`base-${b}`).addEventListener("click", () => aplicarBase(b)));
+  ["mapa", "satelite", "pro"].forEach((b) => $(`base-${b}`).addEventListener("click", () => aplicarBase(b)));
   $("asa").addEventListener("click", () => $("panel").classList.toggle("alto"));
+  $("novedades-cerrar").addEventListener("click", cerrarNovedades);
+  $("novedades-recargar").addEventListener("click", () => location.reload());
+  iniciarSecretos();
   $("puente").addEventListener("click", () => {
     const d = $("puente-detalle");
     d.hidden = !d.hidden;
@@ -757,7 +968,9 @@ function iniciarInterfaz() {
   $("ver-intensidad").addEventListener("change", (e) => { estado.verIntensidad = e.target.checked; pintar(); });
   $("ver-antiguas").addEventListener("change", (e) => { estado.verAntiguas = e.target.checked; pintar(); dibujarPanel(); });
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && (estado.comunaSel != null || estado.alertaSel || estado.eventoSel)) limpiar();
+    if (e.key === "Escape" && !$("huevo").hidden) cerrarHuevo();
+    else if (e.key === "Escape" && !$("novedades").hidden) cerrarNovedades();
+    else if (e.key === "Escape" && (estado.comunaSel != null || estado.alertaSel || estado.eventoSel)) limpiar();
   });
   if (innerWidth <= 760) $("leyenda").open = false;
 }
@@ -781,4 +994,6 @@ map.on("load", async () => {
   await cargarDatos();
   setInterval(cargarDatos, CADA_MS);
   setInterval(actualizarPuente, 30000);
+  revisarVersion(true);
+  setInterval(() => revisarVersion(false), 10 * 6e4);
 });
