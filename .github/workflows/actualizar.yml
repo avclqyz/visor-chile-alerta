@@ -62,12 +62,12 @@ jobs:
       - name: Leer SENAPRED
         run: python connector/actualizar.py
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: web
 
       - id: despliegue
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
 
   latido:
     if: github.event.schedule == '17 9 1 * *'
