@@ -96,3 +96,13 @@ novedades una vez, y quien tenga la web abierta recibe un aviso para actualizar.
 `escritorio/` es una app de Electron para Mac y Windows que abre la web publicada, así que se actualiza sola.
 Para generar los instaladores, sube una etiqueta `escritorio-vX.Y.Z` o ejecuta **Actions → App de escritorio**.
 Quedan en GitHub Releases junto con las instrucciones de `escritorio/INSTALAR.md`.
+
+## Disparador cada 5 minutos
+
+GitHub atrasa las tareas programadas (en la práctica corren cada 30 a 50 minutos). `disparador/` es un Worker
+de Cloudflare que cada 5 minutos pide a GitHub ejecutar **Puente SENAPRED**. Usa una clave de GitHub con
+permiso solo sobre Actions de este repositorio, guardada como secreto `GITHUB_TOKEN` del Worker. Si la clave
+vence o se borra, la web sigue actualizándose con el horario propio de GitHub.
+
+Se ve en Cloudflare en **Workers & Pages → visor-disparador**: el horario en **Settings → Trigger events** y
+cada ejecución en **Logs**.
