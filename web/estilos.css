@@ -270,3 +270,120 @@ a { color: inherit; }
   .maplibregl-ctrl-bottom-right { bottom: 46dvh; }
   .aviso-datos { left: 10px; right: 10px; top: 56px; }
 }
+
+/* Modo cine: sala de situacion animada */
+:root[data-base="cine"] {
+  --fondo: #02070d;
+  --superficie: rgba(3, 14, 22, .84);
+  --superficie-2: rgba(12, 40, 54, .62);
+  --borde: rgba(56, 214, 245, .26);
+  --texto: #dff8ff;
+  --tenue: #6fb3c6;
+  --azul: #38d6f5;
+  --sombra: 0 10px 34px rgba(0, 0, 0, .6), 0 0 24px rgba(56, 214, 245, .1);
+  --cian: #38d6f5;
+  --mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+:root[data-base="cine"] .panel,
+:root[data-base="cine"] .leyenda,
+:root[data-base="cine"] .control,
+:root[data-base="cine"] .segmentado { backdrop-filter: blur(12px) saturate(1.3); -webkit-backdrop-filter: blur(12px) saturate(1.3); }
+:root[data-base="cine"] .marca h1 { font-family: var(--mono); font-size: 15px; letter-spacing: .12em; text-transform: uppercase; color: var(--cian); text-shadow: 0 0 12px rgba(56, 214, 245, .55); }
+:root[data-base="cine"] .seccion,
+:root[data-base="cine"] .leyenda h2 { font-family: var(--mono); color: var(--cian); letter-spacing: .14em; }
+:root[data-base="cine"] .cifra b { font-family: var(--mono); text-shadow: 0 0 10px var(--color); }
+:root[data-base="cine"] .pin.volcan { animation: latido 1.6s ease-in-out infinite; }
+:root[data-base="cine"] .aviso-datos { top: 60px; }
+#tema:disabled { opacity: .4; cursor: default; }
+
+.cine { position: fixed; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+.cine-rejilla {
+  position: absolute; inset: 0;
+  background-image: linear-gradient(rgba(56, 214, 245, .055) 1px, transparent 1px), linear-gradient(90deg, rgba(56, 214, 245, .055) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+.cine-radar {
+  position: absolute; left: 50%; top: 50%;
+  width: 170vmax; height: 170vmax; margin: -85vmax 0 0 -85vmax;
+  background: conic-gradient(from 0deg, rgba(56, 214, 245, .17), rgba(56, 214, 245, 0) 12%, transparent);
+  border-radius: 50%;
+  mix-blend-mode: screen;
+  animation: barrido 8s linear infinite;
+}
+.cine-velo {
+  position: absolute; inset: 0;
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, .16) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at center, transparent 52%, rgba(0, 0, 0, .62) 100%);
+  animation: parpadeo 5s steps(1) infinite;
+}
+.cine-marco {
+  --l: 28px; --c: var(--cian);
+  position: absolute; inset: 8px; opacity: .75;
+  background:
+    linear-gradient(var(--c), var(--c)) top left / var(--l) 2px, linear-gradient(var(--c), var(--c)) top left / 2px var(--l),
+    linear-gradient(var(--c), var(--c)) top right / var(--l) 2px, linear-gradient(var(--c), var(--c)) top right / 2px var(--l),
+    linear-gradient(var(--c), var(--c)) bottom left / var(--l) 2px, linear-gradient(var(--c), var(--c)) bottom left / 2px var(--l),
+    linear-gradient(var(--c), var(--c)) bottom right / var(--l) 2px, linear-gradient(var(--c), var(--c)) bottom right / 2px var(--l);
+  background-repeat: no-repeat;
+}
+.cine-arranque {
+  position: absolute; left: 50%; top: 46%; margin: 0; transform: translateX(-50%);
+  font: 600 14px var(--mono); letter-spacing: .3em; text-transform: uppercase; white-space: nowrap;
+  color: var(--cian); text-shadow: 0 0 14px var(--cian);
+  opacity: 0;
+}
+.cine.arranca .cine-arranque { animation: arranque 2.4s ease-out forwards; }
+.cine.arranca .cine-rejilla { animation: aparecer 1.6s ease-out; }
+
+.cine-hud {
+  position: absolute; top: 12px; left: calc(var(--ancho-panel) + 24px); right: 290px;
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  min-height: 38px; padding: 6px 14px;
+  background: var(--superficie); border: 1px solid var(--borde); border-radius: 8px; box-shadow: var(--sombra);
+  font: 600 11.5px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--cian);
+  white-space: nowrap; overflow: hidden;
+}
+.cine-hud small { color: var(--tenue); font-weight: 400; letter-spacing: .08em; }
+.cine-vivo::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 7px; border-radius: 50%; background: var(--roja); box-shadow: 0 0 8px var(--roja); animation: vivo 1.2s steps(1) infinite; }
+.cine-estado b { color: var(--color); text-shadow: 0 0 10px var(--color); }
+#cine-reloj { font-variant-numeric: tabular-nums; }
+
+.cine-cinta {
+  position: absolute; bottom: 12px; left: calc(var(--ancho-panel) + 24px); right: 272px;
+  display: flex; height: 32px; overflow: hidden;
+  background: var(--superficie); border: 1px solid var(--borde); border-radius: 8px; box-shadow: var(--sombra);
+  font: 600 12px/32px var(--mono); letter-spacing: .06em; color: var(--texto);
+}
+.cine-rotulo { flex: none; padding: 0 12px; background: var(--roja); color: #fff; letter-spacing: .18em; text-transform: uppercase; }
+.cine-ventana { flex: 1; min-width: 0; overflow: hidden; }
+.cine-pista { display: flex; width: max-content; animation: cinta var(--duracion, 60s) linear infinite; }
+.cine-pista span { white-space: pre; padding-left: 16px; }
+
+@keyframes barrido { to { transform: rotate(1turn); } }
+@keyframes cinta { to { transform: translateX(-50%); } }
+@keyframes vivo { 50% { opacity: .15; } }
+@keyframes parpadeo { 0%, 100% { opacity: 1; } 97% { opacity: .82; } }
+@keyframes aparecer { from { opacity: 0; } }
+@keyframes arranque {
+  0% { opacity: 0; } 8% { opacity: 1; } 14% { opacity: .2; } 20%, 70% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-50%) scale(1.04); letter-spacing: .5em; }
+}
+@keyframes latido {
+  0%, 100% { filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 2px var(--color)); }
+  50% { filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 9px var(--color)) drop-shadow(0 0 16px var(--color)); }
+}
+
+@media (max-width: 1599px) { #cine-cifras { display: none; } }
+@media (max-width: 1299px) { .cine-titulo { display: none; } }
+@media (max-width: 760px) {
+  .cine-hud { display: none; }
+  .cine-cinta { left: 10px; right: 10px; bottom: calc(46dvh + 52px); }
+  :root[data-base="cine"] .aviso-datos { top: 56px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cine-radar, .cine-arranque { display: none; }
+  .cine-velo, .cine-vivo::before, .cine.arranca .cine-rejilla, :root[data-base="cine"] .pin.volcan { animation: none; }
+  .cine-pista { animation: none; }
+}

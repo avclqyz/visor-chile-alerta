@@ -13,6 +13,21 @@
 <body>
   <div id="mapa" role="application" aria-label="Mapa de Chile por comunas"></div>
 
+  <div id="cine" class="cine" aria-hidden="true" hidden>
+    <div class="cine-rejilla"></div>
+    <div class="cine-radar"></div>
+    <div class="cine-velo"></div>
+    <div class="cine-marco"></div>
+    <p class="cine-arranque">Estableciendo enlace con SENAPRED…</p>
+    <div class="cine-hud">
+      <span class="cine-vivo">En vivo</span>
+      <span><span class="cine-titulo">Sala de situación · Chile </span><small>Visor no oficial</small></span>
+      <span class="cine-estado"><b id="cine-nivel"></b> <small id="cine-cifras"></small></span>
+      <span id="cine-reloj"></span>
+    </div>
+    <div class="cine-cinta"><span class="cine-rotulo">Boletín</span><div class="cine-ventana"><div id="cine-pista" class="cine-pista"></div></div></div>
+  </div>
+
   <div id="aviso-datos" class="aviso-datos" role="alert" hidden></div>
 
   <aside id="panel" class="panel" aria-label="Alertas">
@@ -49,6 +64,7 @@
     <div class="segmentado" role="group" aria-label="Tipo de mapa">
       <button id="base-mapa" type="button" aria-pressed="true">Mapa</button>
       <button id="base-satelite" type="button" aria-pressed="false">Satélite</button>
+      <button id="base-cine" type="button" aria-pressed="false" title="Sala de situación animada">Cine</button>
     </div>
     <button id="tema" class="control" type="button" title="Cambiar a modo claro" aria-label="Cambiar a modo claro">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9Z"/></svg>

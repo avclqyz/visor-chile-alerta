@@ -30,6 +30,7 @@ const estado = {
   verIntensidad: true,
   verAntiguas: true,
   satelite: false,
+  cine: false,
   frescura: "caido",
   fallosCarga: 0,
   marcas: [],
@@ -91,7 +92,9 @@ const diasSinNovedad = (a) => Math.floor((Date.now() - new Date(a.actualizada)) 
 function color(v) {
   return getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 }
-const opacidadRelleno = () => (estado.satelite ? 0.42 : 0.62);
+const opacidadRelleno = () => (estado.satelite ? 0.42 : estado.cine ? 0.5 : 0.62);
+const nivelDe = ["coalesce", ["feature-state", "nivel"], 0];
+const ANIMAR = !matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const map = new maplibregl.Map({
   container: "mapa",
@@ -198,6 +201,27 @@ function prepararCapas(comunas, regiones) {
       "line-color": color("--tenue"),
       "line-opacity": ["interpolate", ["linear"], ["zoom"], 3.5, 0.28, 6, 0.42, 9, 0.7],
       "line-width": ["interpolate", ["linear"], ["zoom"], 3.5, 0.35, 8, 0.8],
+    },
+  });
+  // Halos del modo cine: solo se muestran en ese modo.
+  map.addLayer({
+    id: "regiones-brillo",
+    type: "line",
+    source: "regiones",
+    filter: [">", ["get", "reg"], 0],
+    layout: { visibility: "none" },
+    paint: { "line-color": "#38d6f5", "line-width": 6, "line-blur": 5, "line-opacity": 0.32 },
+  });
+  map.addLayer({
+    id: "alertas-brillo",
+    type: "line",
+    source: "comunas",
+    layout: { visibility: "none" },
+    paint: {
+      "line-color": ["match", nivelDe, 3, color("--roja"), 2, color("--amarilla"), 1, color("--verde"), "rgba(0,0,0,0)"],
+      "line-width": 5,
+      "line-blur": 4,
+      "line-opacity": ["match", nivelDe, 3, 0.9, 2, 0.7, 1, 0.55, 0],
     },
   });
   map.addLayer({
@@ -366,6 +390,7 @@ function pintar() {
   map.setFilter("cobertura-linea", ["in", ["get", "cut"], ["literal", cubiertas]]);
   map.setFilter("seleccion-linea", ["==", ["get", "cut"], estado.comunaSel ?? -1]);
   dibujarMarcas(seleccion);
+  actualizarCine();
 }
 
 function dibujarMarcas(seleccion) {
@@ -614,9 +639,9 @@ function aplicarTema(tema) {
 function colorearMapa() {
   map.setPaintProperty("fondo", "background-color", color("--fondo"));
   // Sobre la imagen satelital el relleno se confunde con el terreno: el borde lleva el color de la alerta.
-  map.setPaintProperty("comunas-linea", "line-color", estado.satelite
-    ? ["match", ["coalesce", ["feature-state", "nivel"], 0], 3, color("--roja"), 2, color("--amarilla"), 1, color("--verde"), "#ffffff"]
-    : color("--tenue"));
+  // En el modo cine pasa lo mismo, para que las comunas en alerta brillen.
+  const porNivel = (resto) => ["match", nivelDe, 3, color("--roja"), 2, color("--amarilla"), 1, color("--verde"), resto];
+  map.setPaintProperty("comunas-linea", "line-color", estado.satelite ? porNivel("#ffffff") : estado.cine ? porNivel(color("--tenue")) : color("--tenue"));
   map.setPaintProperty("comunas-linea", "line-width", estado.satelite ? 1.6 : ["interpolate", ["linear"], ["zoom"], 3.5, 0.35, 8, 0.8]);
   map.setPaintProperty("regiones-linea", "line-color", estado.satelite ? "#ffffff" : color("--texto"));
   map.setPaintProperty("cobertura-linea", "line-color", estado.satelite ? "#ffffff" : color("--texto"));
@@ -625,13 +650,82 @@ function colorearMapa() {
   map.setPaintProperty("etiquetas", "text-halo-color", estado.satelite ? "#000000" : color("--fondo"));
   map.setPaintProperty("comunas-relleno", "fill-opacity", opacidadRelleno());
 }
-function aplicarBase(satelite) {
-  estado.satelite = satelite;
-  $("base-mapa").setAttribute("aria-pressed", String(!satelite));
-  $("base-satelite").setAttribute("aria-pressed", String(satelite));
-  map.setLayoutProperty("satelite", "visibility", satelite ? "visible" : "none");
-  map.setLayoutProperty("lugares", "visibility", satelite ? "visible" : "none");
+function aplicarBase(base) {
+  if (!map.getLayer("comunas-linea")) return;
+  const eraCine = estado.cine;
+  estado.satelite = base === "satelite";
+  estado.cine = base === "cine";
+  ["mapa", "satelite", "cine"].forEach((b) => $(`base-${b}`).setAttribute("aria-pressed", String(b === base)));
+  const ver = (id, si) => map.setLayoutProperty(id, "visibility", si ? "visible" : "none");
+  ver("satelite", estado.satelite);
+  ver("lugares", estado.satelite);
+  ver("regiones-brillo", estado.cine);
+  ver("alertas-brillo", estado.cine);
+  document.documentElement.dataset.base = base;
+  $("tema").disabled = estado.cine;
+  document.querySelector('meta[name="theme-color"]').content = color("--fondo");
   colorearMapa();
+  if (estado.cine !== eraCine) alternarCine();
+}
+
+/* Modo cine: sala de situacion animada. Solo cambia la presentacion, no los datos. */
+const cine = { vuelta: 0, reloj: 0 };
+
+function alternarCine() {
+  const capa = $("cine");
+  const vuelta = ++cine.vuelta;
+  clearInterval(cine.reloj);
+  capa.hidden = !estado.cine;
+  if (!estado.cine) {
+    map.easeTo({ pitch: 0, duration: ANIMAR ? 900 : 0 });
+    return;
+  }
+  capa.classList.remove("arranca");
+  void capa.offsetWidth;
+  capa.classList.add("arranca");
+  actualizarCine();
+  marcarReloj();
+  cine.reloj = setInterval(marcarReloj, 1000);
+  map.easeTo({ pitch: 38, duration: ANIMAR ? 2200 : 0 });
+  if (!ANIMAR) return;
+  const latir = (t) => {
+    if (vuelta !== cine.vuelta) return;
+    const onda = (ms, min, max) => min + (max - min) * (0.5 + 0.5 * Math.sin((t / ms) * 2 * Math.PI));
+    map.setPaintProperty("comunas-relleno", "fill-opacity",
+      ["match", nivelDe, 3, onda(1200, 0.28, 0.7), 2, onda(2000, 0.24, 0.5), 1, onda(3000, 0.2, 0.38), 0]);
+    map.setPaintProperty("alertas-brillo", "line-opacity",
+      ["match", nivelDe, 3, onda(1200, 0.45, 1), 2, onda(2000, 0.35, 0.8), 1, onda(3000, 0.3, 0.6), 0]);
+    setTimeout(() => requestAnimationFrame(latir), 60);
+  };
+  requestAnimationFrame(latir);
+}
+
+function marcarReloj() {
+  $("cine-reloj").textContent = `${new Intl.DateTimeFormat("es-CL", {
+    timeZone: ZONA_HORARIA, hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+  }).format(new Date())} CHILE`;
+}
+
+function actualizarCine() {
+  if (!estado.cine || !estado.datos) return;
+  const alertas = [...alertasVisibles()].sort((a, b) =>
+    NIVELES[b.nivel].orden - NIVELES[a.nivel].orden || new Date(b.actualizada) - new Date(a.actualizada));
+  const p = peor(alertas);
+  $("cine-nivel").textContent = p ? NIVELES[p.nivel].nombre.toUpperCase() : "SIN ALERTAS";
+  $("cine-nivel").style.setProperty("--color", p ? NIVELES[p.nivel].css : "var(--tenue)");
+  const sismos = estado.datos.eventos.filter((e) => e.sismo).length;
+  const plural = (n, palabra) => `${n} ${palabra}${n === 1 ? "" : "S"}`;
+  $("cine-cifras").textContent = `${plural(alertas.length, "ALERTA")} · ${plural(sismos, "SISMO")} 48 H`;
+  const avisos = [
+    ...alertas.map((a) => `${NIVELES[a.nivel].nombre.toUpperCase()} · ${a.titulo}`),
+    ...estado.datos.eventos.map((e) => `${e.sismo ? "SISMO" : "EVENTO"} · ${e.titulo}`),
+  ];
+  const texto = `${(avisos.length ? avisos : ["Sin alertas vigentes publicadas por SENAPRED"]).join("   ◆   ")}   ◆   `;
+  const pista = $("cine-pista");
+  if (pista.dataset.texto === texto) return;
+  pista.dataset.texto = texto;
+  pista.replaceChildren(nodo("span", { textContent: texto }), nodo("span", { textContent: texto }));
+  pista.style.setProperty("--duracion", `${Math.max(40, Math.round(texto.length * 0.18))}s`);
 }
 
 function iniciarEventosMapa() {
@@ -653,8 +747,7 @@ function iniciarEventosMapa() {
 
 function iniciarInterfaz() {
   $("tema").addEventListener("click", () => aplicarTema(document.documentElement.dataset.tema === "claro" ? "oscuro" : "claro"));
-  $("base-mapa").addEventListener("click", () => aplicarBase(false));
-  $("base-satelite").addEventListener("click", () => aplicarBase(true));
+  ["mapa", "satelite", "cine"].forEach((b) => $(`base-${b}`).addEventListener("click", () => aplicarBase(b)));
   $("asa").addEventListener("click", () => $("panel").classList.toggle("alto"));
   $("puente").addEventListener("click", () => {
     const d = $("puente-detalle");
