@@ -6,3 +6,4 @@ web/data/*.tmp
 .claude/
 graphify-out/
 .graphifyignore
+disparador/.wrangler/
